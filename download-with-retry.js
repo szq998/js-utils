@@ -2,9 +2,9 @@ import http from 'http';
 import https from 'https';
 
 function autoProto(url) {
-    if (url.startsWith("http://")) return http
-    else if (url.startsWith("https://")) return https
-    else throw new TypeError(`URL "${url}" has unsupported protocol`)
+    if (url.startsWith('http://')) return http;
+    else if (url.startsWith('https://')) return https;
+    else throw new TypeError(`URL "${url}" has unsupported protocol`);
 }
 
 function fullyReadResponse(response, encoding = null) {
@@ -58,10 +58,10 @@ function _downloadWithMaxTimeAndRetry(
         let response;
         // set retry timer
         const retry = setTimeout(() => {
+            // destroy connection
+            response?.destroy?.();
+            request?.destroy?.();
             if (currRetry < maxRetry) {
-                // destroy connection
-                response?.destroy?.();
-                request?.destroy?.();
                 // retry
                 download(currRetry + 1);
             } else {
