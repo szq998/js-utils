@@ -1,6 +1,5 @@
-import http from 'http'
-import https from https
-
+import http from 'http';
+import https from 'https';
 
 function autoProto(url) {
     if (url.startsWith("http://")) return http
