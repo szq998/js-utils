@@ -1,5 +1,6 @@
 import http from 'http';
 import https from 'https';
+import workWithTimeoutAndRetry from './work-with-timeout-and-retry';
 
 function autoProto(url) {
     if (url.startsWith('http://')) return http;
@@ -39,52 +40,25 @@ function fullyReadResponse(response, encoding = null) {
     });
 }
 
-function downloadWithMaxTimeAndRetry(url, maxTime = 20000, maxRetry = 10) {
-    return new Promise((resolve, reject) =>
-        _downloadWithMaxTimeAndRetry(url, resolve, reject, maxTime, maxRetry)
-    );
-}
-
-function _downloadWithMaxTimeAndRetry(
-    url,
-    successHandler,
-    failureHandler,
-    maxTime,
-    maxRetry
-) {
-    // download function will retry recursively
-    (function download(currRetry = 0) {
-        let request;
-        let response;
-        // set retry timer
-        const retry = setTimeout(() => {
-            // destroy connection
-            response?.destroy?.();
-            request?.destroy?.();
-            if (currRetry < maxRetry) {
-                // retry
-                download(currRetry + 1);
-            } else {
-                failureHandler(
-                    new Error(
-                        `Retry download exceeds ${maxRetry} times for "${url}".`
-                    )
-                );
-            }
-        }, maxTime);
-        // try download
+function download(url) {
+    let request;
+    let response;
+    const downloadPromise = new Promise((resolve, reject) => {
         request = autoProto(url).get(url, (res) => {
             response = res;
-            fullyReadResponse(res)
-                .then((data) => {
-                    clearTimeout(retry);
-                    successHandler(data);
-                })
-                .catch(() => {}); // omit any exceptions because there will be a retry anyway
+            resolve(fullyReadResponse(res));
         });
-        // omit any exceptions because there will be a retry anyway
-        request.on('error', () => {});
-    })();
+        request.on('error', reject);
+    });
+    const abortClean = () => {
+        request?.destroy?.();
+        response?.destroy?.();
+    };
+    return [downloadPromise, abortClean];
 }
 
-export default downloadWithMaxTimeAndRetry;
+function downloadWithTimeoutAndRetry(url, maxTime, maxRetry) {
+    return workWithTimeoutAndRetry(download, url, maxTime, maxRetry);
+}
+
+export default downloadWithTimeoutAndRetry;
