@@ -8,16 +8,23 @@ const workWrapper = (work, results, args, globalID, poolID) => {
         return poolID;
     };
     // for conveniently set handler
-    const getHandlers = (globalID, poolID) => {
-        return [
-            onSettled.bind(null, false, globalID, poolID), // onFulfilled handler
-            onSettled.bind(null, true, globalID, poolID), // onRejected handler
-        ];
-    };
+    const getHandlers = (globalID, poolID) => [
+        onSettled.bind(null, false, globalID, poolID), // onFulfilled handler
+        onSettled.bind(null, true, globalID, poolID), // onRejected handler
+    ];
     // wrap
     return work(...args).then(...getHandlers(globalID, poolID));
 };
 
+/*
+ * @param work {function} A function that must return a promise.
+ * @param argList {Array} The argument list for work to generate every promise.
+ * @param maxWorker {Integer} The maximum number of concurrency.
+ * @return {Array} The results of all promises. Like the Promise.allSettled(), for those fulfilled,
+ *                  there will be a "status" property of value "fulfilled" and a "value" property
+ *                  holds the promise's result. For those rejected, "status" will be "rejected"
+ *                  and a "reason" property will hold it's error.
+ */
 async function workerPool(work, argList, maxWorker) {
     const results = Array(argList.length);
     // wrap work to retrieve results and to implement worker pool
